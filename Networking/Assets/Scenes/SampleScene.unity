@@ -195,7 +195,7 @@ Light:
   m_BounceIntensity: 1
   m_ColorTemperature: 6570
   m_UseColorTemperature: 0
-  m_BoundingSphereOverride: {x: NaN, y: 6.7762636e-21, z: NaN, w: 0}
+  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
   m_UseBoundingSphereOverride: 0
   m_ShadowRadius: 0
   m_ShadowAngle: 0
@@ -392,6 +392,9 @@ MonoBehaviour:
   NamePrefix: Networking
   Ghosts:
   - prefab: {fileID: 4680864778846470499, guid: 186e64ddc545c47c0a6fd19a57420bb4,
+      type: 3}
+    enabled: 1
+  - prefab: {fileID: -5624695895831571298, guid: c0043c65d7ecb4cd7ac79bce97dc99b3,
       type: 3}
     enabled: 1
 --- !u!1 &1858331154

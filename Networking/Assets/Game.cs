@@ -108,6 +108,7 @@ public class GoInGameClientSystem : ComponentSystem
 [UpdateInGroup(typeof(ServerSimulationSystemGroup))]
 public class GoInGameServerSystem : ComponentSystem
 {
+    private int numClients = 0;
     protected override void OnUpdate()
     {
         Entities.WithNone<SendRpcCommandRequestComponent>().ForEach((Entity reqEnt, ref GoInGameRequest req, ref ReceiveRpcCommandRequestComponent reqSrc) =>
@@ -115,7 +116,17 @@ public class GoInGameServerSystem : ComponentSystem
             PostUpdateCommands.AddComponent<NetworkStreamInGame>(reqSrc.SourceConnection);
             UnityEngine.Debug.Log(String.Format("Server setting connection {0} to in game", EntityManager.GetComponentData<NetworkIdComponent>(reqSrc.SourceConnection).Value));
             var ghostCollection = GetSingleton<GhostPrefabCollectionComponent>();
-            var ghostId = NetworkingGhostSerializerCollection.FindGhostType<CubeSnapshotData>();
+
+            var ghostId = 0;
+            if (numClients % 2 == 0)
+            {
+                ghostId = NetworkingGhostSerializerCollection.FindGhostType<CubeSnapshotData>();
+            }
+            else
+            {
+                ghostId = NetworkingGhostSerializerCollection.FindGhostType<SphereSnapshotData>();
+            }
+            
             var prefab = EntityManager.GetBuffer<GhostPrefabBuffer>(ghostCollection.serverPrefabs)[ghostId].Value;
             var player = EntityManager.Instantiate(prefab);
 
@@ -125,6 +136,8 @@ public class GoInGameServerSystem : ComponentSystem
             PostUpdateCommands.SetComponent(reqSrc.SourceConnection, new CommandTargetComponent {targetEntity = player});
 
             PostUpdateCommands.DestroyEntity(reqEnt);
+
+            numClients++;
         });
     }
 }
