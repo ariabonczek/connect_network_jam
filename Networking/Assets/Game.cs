@@ -83,3 +83,49 @@ public struct GoInGameRequest : IRpcCommand
         return new PortableFunctionPointer<RpcExecutor.ExecuteDelegate>(InvokeExecute);
     }
 }
+
+// When client has a connection with network id, go in game and tell server to also go in game
+[UpdateInGroup(typeof(ClientSimulationSystemGroup))]
+public class GoInGameClientSystem : ComponentSystem
+{
+    protected override void OnCreate()
+    {
+    }
+
+    protected override void OnUpdate()
+    {
+        Entities.WithNone<NetworkStreamInGame>().ForEach((Entity ent, ref NetworkIdComponent id) =>
+        {
+            PostUpdateCommands.AddComponent<NetworkStreamInGame>(ent);
+            var req = PostUpdateCommands.CreateEntity();
+            PostUpdateCommands.AddComponent<GoInGameRequest>(req);
+            PostUpdateCommands.AddComponent(req, new SendRpcCommandRequestComponent { TargetConnection = ent });
+        });
+    }
+}
+
+// When server receives go in game request, go in game and delete request
+[UpdateInGroup(typeof(ServerSimulationSystemGroup))]
+public class GoInGameServerSystem : ComponentSystem
+{
+    protected override void OnUpdate()
+    {
+        Entities.WithNone<SendRpcCommandRequestComponent>().ForEach((Entity reqEnt, ref GoInGameRequest req, ref ReceiveRpcCommandRequestComponent reqSrc) =>
+        {
+            PostUpdateCommands.AddComponent<NetworkStreamInGame>(reqSrc.SourceConnection);
+            UnityEngine.Debug.Log(String.Format("Server setting connection {0} to in game", EntityManager.GetComponentData<NetworkIdComponent>(reqSrc.SourceConnection).Value));
+            var ghostCollection = GetSingleton<GhostPrefabCollectionComponent>();
+            var ghostId = NetworkingGhostSerializerCollection.FindGhostType<CubeSnapshotData>();
+            var prefab = EntityManager.GetBuffer<GhostPrefabBuffer>(ghostCollection.serverPrefabs)[ghostId].Value;
+            var player = EntityManager.Instantiate(prefab);
+
+            EntityManager.SetComponentData(player, new MovableCubeComponent { PlayerId = EntityManager.GetComponentData<NetworkIdComponent>(reqSrc.SourceConnection).Value});
+            PostUpdateCommands.AddBuffer<CubeInput>(player);
+
+            PostUpdateCommands.SetComponent(reqSrc.SourceConnection, new CommandTargetComponent {targetEntity = player});
+
+            PostUpdateCommands.DestroyEntity(reqEnt);
+        });
+    }
+}
+
